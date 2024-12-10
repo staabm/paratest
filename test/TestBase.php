@@ -8,7 +8,9 @@ use InvalidArgumentException;
 use ParaTest\Options;
 use ParaTest\RunnerInterface;
 use ParaTest\WrapperRunner\WrapperRunner;
+use PHPUnit\Event\Facade;
 use PHPUnit\Framework\TestCase;
+use ReflectionProperty;
 use Symfony\Component\Console\Input\ArrayInput;
 use Symfony\Component\Console\Input\InputDefinition;
 use Symfony\Component\Console\Output\BufferedOutput;
@@ -87,7 +89,15 @@ abstract class TestBase extends TestCase
             unset($_SERVER[Options::ENV_KEY_UNIQUE_TOKEN]);
         }
 
-        $exitCode = $runner->run();
+        $refProperty = new ReflectionProperty(Facade::class, 'instance');
+        $keep        = $refProperty->getValue(new Facade());
+        $refProperty->setValue(new Facade(), null);
+        try {
+            $exitCode = $runner->run();
+        } finally {
+            $refProperty->setValue(new Facade(), $keep);
+        }
+
         if ($shouldPutEnvForParatestTestingItSelf) {
             putenv(Options::ENV_KEY_TOKEN . '=' . $prevToken);
             putenv(Options::ENV_KEY_UNIQUE_TOKEN . '=' . $prevUniqueToken);
