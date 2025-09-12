@@ -118,6 +118,25 @@ final class ResultPrinterTest extends TestBase
         self::assertStringStartsWith("Processes:     1\n", $contents);
     }
 
+    public function testStartPrintsShardInfo(): void
+    {
+        $this->printer = new ResultPrinter($this->output, $this->createOptionsFromArgv([
+            '--shard' => '3/5',
+            '--verbose' => true,
+        ]));
+        $contents      = $this->getStartOutput();
+
+        self::assertStringContainsString("Shard:         3/5\n", $contents);
+    }
+
+    public function testStartDoesNotPrintShardInfoWhenNotConfigured(): void
+    {
+        $this->printer = new ResultPrinter($this->output, $this->createOptionsFromArgv(['--verbose' => true]));
+        $contents      = $this->getStartOutput();
+
+        self::assertStringNotContainsString('Shard:', $contents);
+    }
+
     public function testGetHeader(): void
     {
         $this->printer->printResults($this->getEmptyTestResult(), [], []);

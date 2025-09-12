@@ -6,6 +6,7 @@ namespace ParaTest;
 
 use Fidry\CpuCoreCounter\CpuCoreCounter;
 use Fidry\CpuCoreCounter\NumberOfCpuCoreNotFound;
+use InvalidArgumentException;
 use PHPUnit\TextUI\Configuration\Builder;
 use PHPUnit\TextUI\Configuration\Configuration;
 use RuntimeException;
@@ -28,6 +29,7 @@ use function is_array;
 use function is_bool;
 use function is_numeric;
 use function is_string;
+use function preg_match;
 use function realpath;
 use function sprintf;
 use function str_starts_with;
@@ -80,7 +82,7 @@ final readonly class Options
         'default-time-limit' => true,
     ];
 
-    public readonly bool $needsTeamcity;
+    public bool $needsTeamcity;
 
     /**
      * @param non-empty-string                                                      $phpunit
@@ -103,6 +105,8 @@ final readonly class Options
         public string $tmpDir,
         public bool $verbose,
         public bool $functional,
+        public int $currentShard,
+        public int $totalShards,
     ) {
         $this->needsTeamcity = $configuration->outputIsTeamCity() || $configuration->hasLogfileTeamcity();
     }
@@ -157,6 +161,31 @@ final readonly class Options
             $options['coverage-text'] = 'php://stdout';
         }
 
+        $shard = $options['shard'];
+        unset($options['shard']);
+        $currentShard = $totalShards = 0;
+        if (is_string($shard)) {
+            $parts     = [];
+            $pregMatch = preg_match('/^(?<current>\d+)\/(?<total>\d+)$/', $shard, $parts);
+            if ($pregMatch !== 1) {
+                throw new InvalidArgumentException('Invalid shard parameter format: ' . $shard);
+            }
+
+            $currentShard = (int) $parts['current'];
+            $totalShards  = (int) $parts['total'];
+            if ($currentShard <= 0) {
+                throw new InvalidArgumentException('Current shard must be a positive integer: ' . $shard);
+            }
+
+            if ($totalShards <= 1) {
+                throw new InvalidArgumentException('Total shards must be an integer greater than 1: ' . $shard);
+            }
+
+            if ($currentShard > $totalShards) {
+                throw new InvalidArgumentException('Current shard must be less or equal to total shards: ' . $shard);
+            }
+        }
+
         // Must be a static non-customizable reference because ParaTest code
         // is strictly coupled with PHPUnit pinned version
         $phpunit = self::getPhpunitBinary();
@@ -208,6 +237,8 @@ final readonly class Options
             $tmpDir,
             $verbose,
             $functional,
+            $currentShard,
+            $totalShards,
         );
     }
 
@@ -274,6 +305,12 @@ final readonly class Options
                 'v',
                 InputOption::VALUE_NONE,
                 'Output more verbose information',
+            ),
+            new InputOption(
+                'shard',
+                null,
+                InputOption::VALUE_OPTIONAL,
+                '<current>/<total> Run a specific part of the suite',
             ),
 
             // PHPUnit options
@@ -667,5 +704,10 @@ final readonly class Options
         }
 
         return $env;
+    }
+
+    public function hasShard(): bool
+    {
+        return $this->currentShard > 0 && $this->totalShards > 0;
     }
 }
