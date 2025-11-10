@@ -357,11 +357,14 @@ final class WrapperRunner implements RunnerInterface
             return;
         }
 
-        // only processe one file at a time, to make main process can immediately assign new jobs to workers
+        // only processe one file at a time, so the main process stays responsive
+        // and can immediately assign new jobs to workers
         $coverageFile = array_shift($this->coverageFiles);
-        if ($coverageFile !== null) {
-            $this->coverageMerger->addCoverageFromFile($coverageFile);
+        if ($coverageFile === null) {
+            return;
         }
+
+        $this->coverageMerger->addCoverageFromFile($coverageFile);
     }
 
     protected function finalizeCodeCoverageReports(): void
