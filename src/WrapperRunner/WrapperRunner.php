@@ -71,6 +71,10 @@ final class WrapperRunner implements RunnerInterface
     private readonly array $parameters;
     private CodeCoverageFilterRegistry $codeCoverageFilterRegistry;
 
+    private ?CodeCoverage $coverageManager = null;
+
+    private ?CoverageMerger $coverageMerger = null;
+
     public function __construct(
         private readonly Options $options,
         private readonly OutputInterface $output
@@ -113,6 +117,7 @@ final class WrapperRunner implements RunnerInterface
         $this->printer->setTestCount($suiteLoader->testCount);
         $this->printer->start();
         $this->startWorkers();
+        $this->prepareCodeCoverageReports();
         $this->assignAllPendingTests();
         $this->waitForAllToFinish();
 
@@ -158,6 +163,8 @@ final class WrapperRunner implements RunnerInterface
                 }
             }
 
+            $this->generateIncrementalCodeCoverageReport();
+
             usleep(self::CYCLE_SLEEP);
         }
     }
@@ -194,6 +201,8 @@ final class WrapperRunner implements RunnerInterface
                 $this->flushWorker($worker);
                 unset($this->workers[$index]);
             }
+
+            $this->generateIncrementalCodeCoverageReport();
 
             usleep(self::CYCLE_SLEEP);
         }
@@ -305,7 +314,7 @@ final class WrapperRunner implements RunnerInterface
             $this->teamcityFiles,
             $this->testdoxFiles,
         );
-        $this->generateCodeCoverageReports();
+        $this->finalizeCodeCoverageReports();
         $this->generateLogs();
 
         $exitcode = (new ShellExitCodeCalculator())->calculate(
@@ -326,7 +335,7 @@ final class WrapperRunner implements RunnerInterface
         return $exitcode;
     }
 
-    protected function generateCodeCoverageReports(): void
+    protected function prepareCodeCoverageReports(): void
     {
         if ($this->coverageFiles === []) {
             return;
@@ -338,12 +347,34 @@ final class WrapperRunner implements RunnerInterface
             $this->codeCoverageFilterRegistry,
             false,
         );
-        $coverageMerger = new CoverageMerger($coverageManager->codeCoverage());
-        foreach ($this->coverageFiles as $coverageFile) {
-            $coverageMerger->addCoverageFromFile($coverageFile);
+        $this->coverageManager = $coverageManager;
+        $this->coverageMerger  = new CoverageMerger($coverageManager->codeCoverage());
+    }
+
+    protected function generateIncrementalCodeCoverageReport(): void
+    {
+        if ($this->coverageMerger === null) {
+            return;
         }
 
-        $coverageManager->generateReports(
+        // only processe one file at a time, to make main process can immediately assign new jobs to workers
+        $coverageFile = array_shift($this->coverageFiles);
+        if ($coverageFile !== null) {
+            $this->coverageMerger->addCoverageFromFile($coverageFile);
+        }
+    }
+
+    protected function finalizeCodeCoverageReports(): void
+    {
+        if ($this->coverageManager === null) {
+            return;
+        }
+
+        while (count($this->coverageFiles) > 0) {
+            $this->generateIncrementalCodeCoverageReport();
+        }
+
+        $this->coverageManager->generateReports(
             $this->printer->printer,
             $this->options->configuration,
         );
