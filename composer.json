@@ -53,9 +53,9 @@
         "ext-pcov": "*",
         "ext-posix": "*",
         "doctrine/coding-standard": "^14.0.0",
-        "phpstan/phpstan": "^2.1.31",
+        "phpstan/phpstan": "^2.1.32",
         "phpstan/phpstan-deprecation-rules": "^2.0.3",
-        "phpstan/phpstan-phpunit": "^2.0.7",
+        "phpstan/phpstan-phpunit": "^2.0.8",
         "phpstan/phpstan-strict-rules": "^2.0.7",
         "symfony/filesystem": "^6.4.13 || ^7.3.2"
     },
