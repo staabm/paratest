@@ -369,12 +369,16 @@ final class WrapperRunner implements RunnerInterface
 
     protected function finalizeCodeCoverageReports(): void
     {
-        if ($this->coverageManager === null) {
+        if ($this->coverageFiles === []) {
             return;
         }
 
         while (count($this->coverageFiles) > 0) {
             $this->generateIncrementalCodeCoverageReport();
+        }
+
+        if ($this->coverageManager === null) {
+            return;
         }
 
         $this->coverageManager->generateReports(
