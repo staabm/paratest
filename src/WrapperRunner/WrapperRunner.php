@@ -357,8 +357,6 @@ final class WrapperRunner implements RunnerInterface
             return;
         }
 
-        $path = $coverageFile->getPathname();
-        echo "processing incremental code coverage for $path\n";
         if (! $this->coverageMerger->addCoverageFromFile($coverageFile)) {
             return;
         }
