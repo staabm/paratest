@@ -175,7 +175,9 @@ final class WrapperRunner implements RunnerInterface
             $worker->unexpectedOutputFile,
             $worker->teamcityFile ?? null,
         );
-        $this->generateIncrementalCodeCoverageReport($worker->coverageFile);
+        if (isset($worker->coverageFile)) {
+            $this->generateIncrementalCodeCoverageReport($worker->coverageFile);
+        }
         $worker->reset();
     }
 
@@ -356,7 +358,10 @@ final class WrapperRunner implements RunnerInterface
 
         $path = $coverageFile->getPathname();
         echo "processing incremental code coverage for $path\n";
-        $this->coverageMerger->addCoverageFromFile($coverageFile);
+        if (! $this->coverageMerger->addCoverageFromFile($coverageFile)) {
+            return;
+        }
+
         foreach ($this->coverageFiles as $key => $aCoverageFile) {
             if ($coverageFile === $aCoverageFile) {
                 unset($this->coverageFiles[$key]);
