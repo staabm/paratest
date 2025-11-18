@@ -175,9 +175,6 @@ final class WrapperRunner implements RunnerInterface
             $worker->unexpectedOutputFile,
             $worker->teamcityFile ?? null,
         );
-        if (isset($worker->coverageFile)) {
-            $this->generateIncrementalCodeCoverageReport($worker->coverageFile);
-        }
 
         $worker->reset();
     }
@@ -201,6 +198,10 @@ final class WrapperRunner implements RunnerInterface
                 }
 
                 $this->flushWorker($worker);
+                if (isset($worker->coverageFile)) {
+                    $this->generateIncrementalCodeCoverageReport($worker->coverageFile);
+                }
+
                 unset($this->workers[$index]);
             }
 
@@ -254,6 +255,10 @@ final class WrapperRunner implements RunnerInterface
         // We need to wait for ApplicationForWrapperWorker::end to end
         while ($this->workers[$token]->isRunning()) {
             usleep(self::CYCLE_SLEEP);
+        }
+
+        if (isset($this->workers[$token]->coverageFile)) {
+            $this->generateIncrementalCodeCoverageReport($this->workers[$token]->coverageFile);
         }
 
         unset($this->workers[$token]);
@@ -371,10 +376,6 @@ final class WrapperRunner implements RunnerInterface
 
     protected function finalizeCodeCoverageReports(): void
     {
-        if ($this->coverageFiles === []) {
-            return;
-        }
-
         if ($this->coverageMerger === null) {
             return;
         }
