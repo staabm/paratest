@@ -4,7 +4,6 @@ declare(strict_types=1);
 
 namespace ParaTest\WrapperRunner;
 
-use LogicException;
 use ParaTest\Coverage\CoverageMerger;
 use ParaTest\JUnit\LogMerger;
 use ParaTest\JUnit\Writer;
@@ -23,7 +22,6 @@ use Symfony\Component\Process\PhpExecutableFinder;
 
 use function array_merge;
 use function array_merge_recursive;
-use function array_search;
 use function array_shift;
 use function assert;
 use function count;
@@ -61,7 +59,7 @@ final class WrapperRunner implements RunnerInterface
     private array $resultCacheFiles = [];
     /** @var list<SplFileInfo> */
     private array $testResultFiles = [];
-    /** @var list<SplFileInfo> */
+    /** @var array<SplFileInfo> */
     private array $coverageFiles = [];
     /** @var list<SplFileInfo> */
     private array $junitFiles = [];
@@ -356,14 +354,15 @@ final class WrapperRunner implements RunnerInterface
             return;
         }
 
-        $key = array_search($this->coverageFiles, $coverageFile->getPathname());
-        if ($key === false) {
-            throw new LogicException();
-        }
-
-        echo "processing incremental code coverage for $coverageFile\n";
+        $path = $coverageFile->getPathname();
+        echo "processing incremental code coverage for $path\n";
         $this->coverageMerger->addCoverageFromFile($coverageFile);
-        unset($this->coverageFiles[$key]);
+        foreach ($this->coverageFiles as $key => $aCoverageFile) {
+            if ($coverageFile === $aCoverageFile) {
+                unset($this->coverageFiles[$key]);
+                break;
+            }
+        }
     }
 
     protected function finalizeCodeCoverageReports(): void
@@ -407,7 +406,7 @@ final class WrapperRunner implements RunnerInterface
         );
     }
 
-    /** @param list<SplFileInfo> $files */
+    /** @param array<SplFileInfo> $files */
     private function clearFiles(array $files): void
     {
         foreach ($files as $file) {
