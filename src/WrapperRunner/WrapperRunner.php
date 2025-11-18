@@ -355,7 +355,7 @@ final class WrapperRunner implements RunnerInterface
             return;
         }
 
-        $key = array_search($this->coverageFiles, $coverageFile);
+        $key = array_search($this->coverageFiles, $coverageFile->getPathname());
         if ($key === false) {
             throw new LogicException();
         }
