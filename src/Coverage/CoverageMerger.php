@@ -17,10 +17,10 @@ final readonly class CoverageMerger
     ) {
     }
 
-    public function addCoverageFromFile(SplFileInfo $coverageFile): void
+    public function addCoverageFromFile(SplFileInfo $coverageFile): bool
     {
         if (! $coverageFile->isFile() || $coverageFile->getSize() === 0) {
-            return;
+            return false;
         }
 
         /** @psalm-suppress UnresolvableInclude **/
@@ -28,5 +28,7 @@ final readonly class CoverageMerger
         assert($coverage instanceof CodeCoverage);
 
         $this->coverage->merge($coverage);
+
+        return true;
     }
 }

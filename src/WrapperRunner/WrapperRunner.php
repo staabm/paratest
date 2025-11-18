@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace ParaTest\WrapperRunner;
 
+use LogicException;
 use ParaTest\Coverage\CoverageMerger;
 use ParaTest\JUnit\LogMerger;
 use ParaTest\JUnit\Writer;
@@ -163,8 +164,6 @@ final class WrapperRunner implements RunnerInterface
                 }
             }
 
-            $this->generateIncrementalCodeCoverageReport();
-
             usleep(self::CYCLE_SLEEP);
         }
     }
@@ -177,6 +176,7 @@ final class WrapperRunner implements RunnerInterface
             $worker->unexpectedOutputFile,
             $worker->teamcityFile ?? null,
         );
+        $this->generateIncrementalCodeCoverageReport($worker->coverageFile);
         $worker->reset();
     }
 
@@ -201,8 +201,6 @@ final class WrapperRunner implements RunnerInterface
                 $this->flushWorker($worker);
                 unset($this->workers[$index]);
             }
-
-            $this->generateIncrementalCodeCoverageReport();
 
             usleep(self::CYCLE_SLEEP);
         }
@@ -351,20 +349,19 @@ final class WrapperRunner implements RunnerInterface
         $this->coverageMerger  = new CoverageMerger($coverageManager->codeCoverage());
     }
 
-    protected function generateIncrementalCodeCoverageReport(): void
+    protected function generateIncrementalCodeCoverageReport(SplFileInfo $coverageFile): void
     {
         if ($this->coverageMerger === null) {
             return;
         }
 
-        // only processe one file at a time, so the main process stays responsive
-        // and can immediately assign new jobs to workers
-        $coverageFile = array_shift($this->coverageFiles);
-        if ($coverageFile === null) {
-            return;
+        $key = array_search($this->coverageFiles, $coverageFile);
+        if ($key === false) {
+            throw new LogicException();
         }
-
+        echo "processing incremental code coverage for $coverageFile\n";
         $this->coverageMerger->addCoverageFromFile($coverageFile);
+        unset($this->coverageFiles[$key]);
     }
 
     protected function finalizeCodeCoverageReports(): void
@@ -373,8 +370,12 @@ final class WrapperRunner implements RunnerInterface
             return;
         }
 
-        while (count($this->coverageFiles) > 0) {
-            $this->generateIncrementalCodeCoverageReport();
+        if ($this->coverageMerger === null) {
+            return;
+        }
+
+        foreach($this->coverageFiles as $coverageFile) {
+            $this->coverageMerger->addCoverageFromFile($coverageFile);
         }
 
         if ($this->coverageManager === null) {
