@@ -178,6 +178,7 @@ final class WrapperRunner implements RunnerInterface
         if (isset($worker->coverageFile)) {
             $this->generateIncrementalCodeCoverageReport($worker->coverageFile);
         }
+
         $worker->reset();
     }
 
