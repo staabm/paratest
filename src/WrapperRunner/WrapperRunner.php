@@ -197,10 +197,11 @@ final class WrapperRunner implements RunnerInterface
                     throw $worker->getWorkerCrashedException();
                 }
 
-                $this->flushWorker($worker);
                 if (isset($worker->coverageFile)) {
                     $this->generateIncrementalCodeCoverageReport($worker->coverageFile);
                 }
+
+                $this->flushWorker($worker);
 
                 unset($this->workers[$index]);
             }
