@@ -23,6 +23,7 @@ use Symfony\Component\Process\PhpExecutableFinder;
 
 use function array_merge;
 use function array_merge_recursive;
+use function array_search;
 use function array_shift;
 use function assert;
 use function count;
@@ -359,6 +360,7 @@ final class WrapperRunner implements RunnerInterface
         if ($key === false) {
             throw new LogicException();
         }
+
         echo "processing incremental code coverage for $coverageFile\n";
         $this->coverageMerger->addCoverageFromFile($coverageFile);
         unset($this->coverageFiles[$key]);
@@ -374,7 +376,7 @@ final class WrapperRunner implements RunnerInterface
             return;
         }
 
-        foreach($this->coverageFiles as $coverageFile) {
+        foreach ($this->coverageFiles as $coverageFile) {
             $this->coverageMerger->addCoverageFromFile($coverageFile);
         }
 
